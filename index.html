@@ -10,15 +10,19 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
     <style>
+        @font-face {
+            font-family: 'DIN NEXT';
+            src: url('https://fonts.cdnfonts.com/s/18226/DINNextLTPro-Regular.woff') format('woff');
+        }
         body {
             text-align: center;
-            font-family: Arial, sans-serif;
+            font-family: 'DIN NEXT', sans-serif;
             background-color: #f8f9fa;
             margin: 0;
             padding: 20px;
         }
         #tryOnBtn {
-            background: linear-gradient(90deg, #ff416c, #ff4b2b);
+            background: #F83A3A;
             border: none;
             padding: 15px 30px;
             font-size: 18px;
@@ -27,6 +31,7 @@
             cursor: pointer;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
             transition: transform 0.2s, box-shadow 0.2s;
+            font-family: 'DIN NEXT', sans-serif;
         }
         #tryOnBtn:hover {
             transform: scale(1.05);
@@ -48,31 +53,27 @@
             position: absolute;
             top: 15px;
             right: 15px;
-            background: rgba(255, 255, 255, 0.8);
-            color: black;
+            background: transparent;
+            color: white;
             border: none;
             padding: 12px 15px;
             font-size: 22px;
             cursor: pointer;
             border-radius: 50%;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
-            transition: transform 0.2s, background 0.2s;
+            transition: transform 0.2s;
         }
         #closeBtn:hover {
-            background: rgba(255, 255, 255, 1);
             transform: scale(1.1);
         }
         video {
             width: 100vw;
             height: 100vh;
             object-fit: cover;
-            transform: scaleX(-1); /* Inverti l'immagine per renderla più naturale */
+            transform: scaleX(-1);
         }
     </style>
 </head>
 <body>
-    <h1>Prova Virtuale del Piercing</h1>
-    <p>Fai clic sul pulsante qui sotto per provare il piercing direttamente sul tuo viso!</p>
     <button id="tryOnBtn">💎 Prova Ora 💎</button>
     
     <div id="cameraContainer">
@@ -94,7 +95,7 @@
                 window.stream.getTracks().forEach(track => track.stop());
             }
         });
-a
+
         async function startFaceTracking() {
             try {
                 const constraints = { video: { facingMode: "user", width: { ideal: 1920 }, height: { ideal: 1080 } } };
@@ -116,3 +117,4 @@ a
     </script>
 </body>
 </html>
+
