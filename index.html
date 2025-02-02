@@ -92,7 +92,7 @@
         <video id="cameraFeed" autoplay playsinline></video>
         <a-scene embedded>
             <a-assets>
-                <a-asset-item id="piercingModel" src="URL_DEL_TUO_MODELLO.glb"></a-asset-item>
+                <a-asset-item id="piercingModel" src="heart_septum.glb"></a-asset-item>
             </a-assets>
             <a-entity id="piercing" gltf-model="#piercingModel" position="0 0 -1" scale="0.05 0.05 0.05"></a-entity>
         </a-scene>
@@ -106,10 +106,29 @@
                 video.srcObject = stream;
                 video.onloadedmetadata = () => video.play();
                 window.stream = stream;
+                
+                const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
+                faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+                faceMesh.onResults(updatePiercingPosition);
+                const camera = new Camera(video, {
+                    onFrame: async () => { await faceMesh.send({ image: video }); },
+                    width: 640,
+                    height: 480
+                });
+                camera.start();
             } catch (error) {
                 console.error("Errore nell'accesso alla fotocamera:", error);
                 alert("Errore: impossibile accedere alla fotocamera. Assicurati che sia collegata e che il browser abbia i permessi. Su iPhone, usa Safari e assicurati che l'accesso alla fotocamera sia abilitato nelle impostazioni.");
             }
+        }
+        
+        function updatePiercingPosition(results) {
+            if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
+            const noseTip = results.multiFaceLandmarks[0][1]; // Punto del naso
+            const piercing = document.getElementById("piercing");
+            const x = (noseTip.x - 0.5) * 2;
+            const y = -(noseTip.y - 0.5) * 2;
+            piercing.setAttribute("position", `${x} ${y} -1`);
         }
         
         document.getElementById("tryOnBtn").addEventListener("click", async function() {
