@@ -92,31 +92,23 @@
         <video id="cameraFeed" autoplay playsinline></video>
         <a-scene embedded>
             <a-assets>
-                <a-asset-item id="piercingModel" src="heart_septum.glb"></a-asset-item>
+                <a-asset-item id="piercingModel" src="URL_DEL_TUO_MODELLO.glb"></a-asset-item>
             </a-assets>
             <a-entity id="piercing" gltf-model="#piercingModel" position="0 0 -1" scale="0.05 0.05 0.05"></a-entity>
         </a-scene>
     </div>
     
     <script>
-        async function loadFaceMesh() {
-            const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
-            faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-            faceMesh.onResults(updatePiercingPosition);
+        async function startFaceTracking() {
             const video = document.getElementById("cameraFeed");
-            const camera = new Camera(video, {
-                onFrame: async () => { await faceMesh.send({ image: video }); },
-                width: 640,
-                height: 480
-            });
-            camera.start();
-        }
-        
-        function updatePiercingPosition(results) {
-            if (results.multiFaceLandmarks.length > 0) {
-                const noseTip = results.multiFaceLandmarks[0][1]; // Punto del naso
-                const piercing = document.getElementById("piercing");
-                piercing.setAttribute("position", `${noseTip.x * 2 - 1} ${1 - noseTip.y * 2} -1`);
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => video.play();
+                window.stream = stream;
+            } catch (error) {
+                console.error("Errore nell'accesso alla fotocamera:", error);
+                alert("Errore: impossibile accedere alla fotocamera. Assicurati che sia collegata e che il browser abbia i permessi. Su iPhone, usa Safari e assicurati che l'accesso alla fotocamera sia abilitato nelle impostazioni.");
             }
         }
         
@@ -125,7 +117,7 @@
             const cameraContainer = document.getElementById("cameraContainer");
             cameraContainer.style.display = "flex";
             setTimeout(() => cameraContainer.classList.add("show"), 10);
-            await loadFaceMesh();
+            await startFaceTracking();
         });
         
         document.getElementById("closeBtn").addEventListener("click", function() {
