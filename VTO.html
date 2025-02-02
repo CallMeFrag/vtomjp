@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Try On</title>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        #tryOnBtn {
+            background: linear-gradient(90deg, #ff416c, #ff4b2b);
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            color: white;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #tryOnBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0px 6px 10px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <h1>Prova Virtuale del Piercing</h1>
+    <p>Fai clic sul pulsante qui sotto per provare il piercing direttamente sul tuo viso!</p>
+    <button id="tryOnBtn">💎 Prova Ora 💎</button>
+    
+    <a-scene embedded arjs>
+        <!-- Modello 3D del piercing -->
+        <a-assets>
+            <a-asset-item id="jewelModel" src="gioielli/piercing.glb"></a-asset-item>
+        </a-assets>
+        
+        <!-- Posizionamento del modello 3D -->
+        <a-entity id="jewel" gltf-model="#jewelModel" position="0 0 -2" scale="0.1 0.1 0.1"></a-entity>
+        
+        <a-camera position="0 1.6 0"></a-camera>
+    </a-scene>
+    
+    <script>
+        document.getElementById("tryOnBtn").addEventListener("click", function() {
+            document.querySelector("a-scene").setAttribute("arjs", "sourceType: webcam;");
+            startFaceTracking();
+        });
+
+        async function startFaceTracking() {
+            const video = document.createElement("video");
+            video.width = 640;
+            video.height = 480;
+            document.body.appendChild(video);
+            
+            const constraints = { video: true };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = stream;
+            video.play();
+
+            const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
+            faceMesh.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            faceMesh.onResults(results => {
+                if (results.multiFaceLandmarks.length > 0) {
+                    const face = results.multiFaceLandmarks[0];
+                    const noseTip = face[1]; // Punto di riferimento per la punta del naso
+                    const x = (noseTip.x - 0.5) * 2;
+                    const y = (noseTip.y - 0.5) * -2;
+                    document.getElementById("jewel").setAttribute("position", `${x} ${y} -1.5`);
+                }
+            });
+
+            const camera = new Camera(video, {
+                onFrame: async () => {
+                    await faceMesh.send({ image: video });
+                },
+                width: 640,
+                height: 480
+            });
+            camera.start();
+        }
+    </script>
+</body>
+</html>
