@@ -53,16 +53,20 @@
             position: absolute;
             top: 15px;
             right: 15px;
-            background: transparent;
+            background: rgba(0, 0, 0, 0.5);
             color: white;
             border: none;
             padding: 12px 15px;
             font-size: 22px;
             cursor: pointer;
             border-radius: 50%;
-            transition: transform 0.2s;
+            transition: transform 0.2s, background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         #closeBtn:hover {
+            background: rgba(0, 0, 0, 0.8);
             transform: scale(1.1);
         }
         video {
@@ -85,12 +89,14 @@
         document.getElementById("tryOnBtn").addEventListener("click", async function() {
             const cameraContainer = document.getElementById("cameraContainer");
             cameraContainer.style.display = "flex";
+            document.getElementById("closeBtn").style.display = "flex";
             startFaceTracking();
         });
         
         document.getElementById("closeBtn").addEventListener("click", function() {
             const cameraContainer = document.getElementById("cameraContainer");
             cameraContainer.style.display = "none";
+            document.getElementById("closeBtn").style.display = "none";
             if (window.stream) {
                 window.stream.getTracks().forEach(track => track.stop());
             }
@@ -108,6 +114,7 @@
                 window.stream = stream;
                 const video = document.getElementById("cameraFeed");
                 video.srcObject = stream;
+                document.getElementById("closeBtn").style.display = "flex";
                 
             } catch (error) {
                 console.error("Errore nell'accesso alla fotocamera:", error);
@@ -117,4 +124,3 @@
     </script>
 </body>
 </html>
-
