@@ -3,20 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Virtual Try On</title>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <title>Virtual Try On - Shopify</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
     <style>
-        @font-face {
-            font-family: 'DIN NEXT';
-            src: url('https://fonts.cdnfonts.com/s/18226/DINNextLTPro-Regular.woff') format('woff');
-        }
         body {
             text-align: center;
-            font-family: 'DIN NEXT', sans-serif;
+            font-family: Arial, sans-serif;
             background-color: #f8f9fa;
             margin: 0;
             padding: 20px;
@@ -30,16 +27,8 @@
             color: white;
             border-radius: 30px;
             cursor: pointer;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-            font-family: 'DIN NEXT', sans-serif;
             position: relative;
             z-index: 1001;
-            display: inline-block;
-        }
-        #tryOnBtn:hover {
-            transform: scale(1.05);
-            box-shadow: 0px 6px 10px rgba(0, 0, 0, 0.2);
         }
         #cameraContainer {
             display: none;
@@ -48,7 +37,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: black;
+            background: rgba(0, 0, 0, 0.8);
             z-index: 1000;
             justify-content: center;
             align-items: center;
@@ -67,15 +56,6 @@
             border: none;
             cursor: pointer;
             z-index: 1001;
-            transition: transform 0.2s ease-in-out;
-        }
-        #closeBtn img {
-            width: 50px;
-            height: 50px;
-            opacity: 0.8;
-        }
-        #closeBtn:hover {
-            transform: scale(1.2);
         }
         video {
             width: 100vw;
@@ -83,54 +63,26 @@
             object-fit: cover;
             transform: scaleX(-1);
         }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
     <button id="tryOnBtn">💎 Prova Ora 💎</button>
     <div id="cameraContainer">
-        <button id="closeBtn"><img src="https://cdn-icons-png.flaticon.com/512/4219/4219012.png" alt="Chiudi"></button>
+        <button id="closeBtn">❌</button>
         <video id="cameraFeed" autoplay playsinline></video>
-        <a-scene embedded>
-            <a-assets>
-                <a-asset-item id="piercingModel" src="https://github.com/CallMeFrag/vtomjp/blob/main/heart_septum.glb"></a-asset-item>
-            </a-assets>
-            <a-entity id="piercing" gltf-model="#piercingModel" position="0 0 -1" scale="0.05 0.05 0.05"></a-entity>
-        </a-scene>
+        <canvas id="threeCanvas"></canvas>
     </div>
     
     <script>
-        async function startFaceTracking() {
-            const video = document.getElementById("cameraFeed");
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                video.srcObject = stream;
-                video.onloadedmetadata = () => video.play();
-                window.stream = stream;
-                
-                const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
-                faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-                faceMesh.onResults(updatePiercingPosition);
-                const camera = new Camera(video, {
-                    onFrame: async () => { await faceMesh.send({ image: video }); },
-                    width: 640,
-                    height: 480
-                });
-                camera.start();
-            } catch (error) {
-                console.error("Errore nell'accesso alla fotocamera:", error);
-                alert("Errore: impossibile accedere alla fotocamera. Assicurati che sia collegata e che il browser abbia i permessi. Su iPhone, usa Safari e assicurati che l'accesso alla fotocamera sia abilitato nelle impostazioni.");
-            }
-        }
-        
-        function updatePiercingPosition(results) {
-            if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
-            const noseTip = results.multiFaceLandmarks[0][1]; // Punto del naso
-            const piercing = document.getElementById("piercing");
-            const x = (noseTip.x - 0.5) * 2;
-            const y = -(noseTip.y - 0.5) * 2;
-            const z = -1.5;
-            piercing.setAttribute("position", `${x} ${y} ${z}`);
-        }
+        let scene, camera, renderer, piercing, faceMesh;
         
         document.getElementById("tryOnBtn").addEventListener("click", async function() {
             document.getElementById("tryOnBtn").style.display = "none";
@@ -151,6 +103,72 @@
                 window.stream.getTracks().forEach(track => track.stop());
             }
         });
+
+        async function startFaceTracking() {
+            const video = document.getElementById("cameraFeed");
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => video.play();
+                window.stream = stream;
+                
+                faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
+                faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+                faceMesh.onResults(updatePiercingPosition);
+                
+                async function sendFrame() {
+                    await faceMesh.send({ image: video });
+                    requestAnimationFrame(sendFrame);
+                }
+                sendFrame();
+                
+                initThreeJS();
+            } catch (error) {
+                console.error("Errore nell'accesso alla fotocamera:", error);
+                alert("Errore: impossibile accedere alla fotocamera. Assicurati che sia collegata e che il browser abbia i permessi.");
+            }
+        }
+
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById("cameraContainer").appendChild(renderer.domElement);
+            
+            const loader = new THREE.GLTFLoader();
+            loader.load("https://callmefrag.github.io/vtomjp/heart_septum.glb", function(gltf) {
+                piercing = gltf.scene;
+                piercing.scale.set(0.1, 0.1, 0.1);
+                scene.add(piercing);
+            }, undefined, function(error) {
+                console.error("Errore nel caricamento del modello:", error);
+            });
+            
+            const light = new THREE.AmbientLight(0xffffff, 1);
+            scene.add(light);
+            
+            camera.position.z = 0.5;
+            animate();
+        }
+        
+        function updatePiercingPosition(results) {
+            if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
+            const noseTip = results.multiFaceLandmarks[0][1];
+            if (!noseTip) return;
+            
+            const x = (noseTip.x - 0.5) * 1.2;
+            const y = -(noseTip.y - 0.5) * 1.2;
+            
+            if (piercing) {
+                piercing.position.set(x, y, -0.3);
+            }
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
     </script>
 </body>
 </html>
