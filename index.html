@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Try On</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        #tryOnBtn {
+            background: linear-gradient(90deg, #ff416c, #ff4b2b);
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            color: white;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #tryOnBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0px 6px 10px rgba(0, 0, 0, 0.2);
+        }
+        #cameraContainer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        #closeBtn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.8);
+            color: black;
+            border: none;
+            padding: 12px 15px;
+            font-size: 22px;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, background 0.2s;
+        }
+        #closeBtn:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.1);
+        }
+        video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <h1>Prova Virtuale del Piercing</h1>
+    <p>Fai clic sul pulsante qui sotto per provare il piercing direttamente sul tuo viso!</p>
+    <button id="tryOnBtn">💎 Prova Ora 💎</button>
+    
+    <div id="cameraContainer">
+        <button id="closeBtn">×</button>
+        <video id="cameraFeed" autoplay playsinline></video>
+    </div>
+    
+    <script>
+        document.getElementById("tryOnBtn").addEventListener("click", async function() {
+            const cameraContainer = document.getElementById("cameraContainer");
+            cameraContainer.style.display = "flex";
+            startFaceTracking();
+        });
+        
+        document.getElementById("closeBtn").addEventListener("click", function() {
+            const cameraContainer = document.getElementById("cameraContainer");
+            cameraContainer.style.display = "none";
+            if (window.stream) {
+                window.stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        async function startFaceTracking() {
+            try {
+                const constraints = { video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                if (!stream) {
+                    throw new Error("Impossibile accedere alla fotocamera.");
+                }
+                
+                window.stream = stream;
+                const video = document.getElementById("cameraFeed");
+                video.srcObject = stream;
+                
+            } catch (error) {
+                console.error("Errore nell'accesso alla fotocamera:", error);
+                alert("Errore: impossibile accedere alla fotocamera. Assicurati che sia collegata e che il browser abbia i permessi. Su iPhone, usa Safari e assicurati che l'accesso alla fotocamera sia abilitato nelle impostazioni. Prova a ricaricare la pagina e concedere nuovamente i permessi.");
+            }
+        }
+    </script>
+</body>
+</html>
